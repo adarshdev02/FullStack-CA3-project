@@ -1,0 +1,11 @@
+const router = require('express').Router();
+const { protect } = require('../middleware/auth');
+const { createDonation, listDonations, myDonations, getDonation, updateDonation, deleteDonation } = require('../controllers/donationController');
+router.use(protect);
+router.get('/', listDonations);
+router.get('/my', myDonations);
+router.get('/:id', getDonation);
+router.post('/', (req, res, next) => req.user.role === 'donor' ? createDonation(req, res, next) : res.status(403).json({ message: 'Donor access required' }));
+router.put('/:id', (req, res, next) => req.user.role === 'donor' ? updateDonation(req, res, next) : res.status(403).json({ message: 'Donor access required' }));
+router.delete('/:id', (req, res, next) => req.user.role === 'donor' ? deleteDonation(req, res, next) : res.status(403).json({ message: 'Donor access required' }));
+module.exports = router;
