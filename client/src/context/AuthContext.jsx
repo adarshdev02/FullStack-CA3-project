@@ -18,7 +18,12 @@ export function AuthProvider({ children }) {
   async function register(details) {
     return api('/auth/register', { method: 'POST', body: JSON.stringify(details) });
   }
+  async function updateProfile(details) {
+    const data = await api('/auth/profile', { method: 'PUT', body: JSON.stringify(details) });
+    setUser(data.user);
+    return data.user;
+  }
   function logout() { localStorage.removeItem('foodrescue_token'); setUser(null); }
-  return <AuthContext.Provider value={{ user, loading, login, register, logout }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, loading, login, register, updateProfile, logout }}>{children}</AuthContext.Provider>;
 }
 export const useAuth = () => useContext(AuthContext);

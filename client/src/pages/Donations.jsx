@@ -13,15 +13,17 @@ function rankDonationMatches(donations, city) {
   return donations
     .map((item) => {
       const deadline = Date.parse(item.pickupDeadline);
-      const sameCity = Boolean(normalizedCity) && item.city?.trim().toLowerCase() === normalizedCity;
+      const pickupCityMatch = Boolean(normalizedCity) && item.city?.trim().toLowerCase() === normalizedCity;
+      const donorCityMatch = Boolean(normalizedCity) && item.donor?.city?.trim().toLowerCase() === normalizedCity;
       const pickupSoon = Number.isFinite(deadline) && deadline > now && deadline - now <= 24 * 60 * 60 * 1000;
       const matchReasons = [];
-      if (sameCity) matchReasons.push('Same city');
+      if (donorCityMatch) matchReasons.push('Donor in your city');
+      if (pickupCityMatch) matchReasons.push('Pickup in your city');
       if (pickupSoon) matchReasons.push('Pickup soon');
 
       return {
         item: { ...item, matchReasons },
-        score: Number(sameCity) * 2 + Number(pickupSoon),
+        score: Number(pickupCityMatch) * 3 + Number(donorCityMatch) * 2 + Number(pickupSoon),
         deadline: Number.isFinite(deadline) ? deadline : Number.MAX_SAFE_INTEGER
       };
     })
@@ -30,10 +32,11 @@ function rankDonationMatches(donations, city) {
 }
 
 export default function Donations() {
-  const { user } = useAuth(); const [search] = useSearchParams(); const [items, setItems] = useState([]); const [form, setForm] = useState(initial); const [showForm, setShowForm] = useState(search.get('create') === 'true'); const [query, setQuery] = useState(''); const [error, setError] = useState(''); const [success, setSuccess] = useState(''); const [requestDonation, setRequestDonation] = useState(null); const [requestedQuantity, setRequestedQuantity] = useState(1);
+  const { user } = useAuth(); const [search] = useSearchParams(); const [items, setItems] = useState([]); const [form, setForm] = useState(initial); const [showForm, setShowForm] = useState(search.get('create') === 'true'); const [query, setQuery] = useState(user.role === 'ngo' ? user.city || '' : ''); const [error, setError] = useState(''); const [success, setSuccess] = useState(''); const [requestDonation, setRequestDonation] = useState(null); const [requestedQuantity, setRequestedQuantity] = useState(1);
   async function load() {
-    const data = await api(user.role === 'donor' ? '/donations/my' : `/donations?city=${encodeURIComponent(query)}`);
-    setItems(user.role === 'ngo' ? rankDonationMatches(data, user.city) : data);
+    const cityQuery = query.trim();
+    const data = await api(user.role === 'donor' ? '/donations/my' : `/donations?city=${encodeURIComponent(cityQuery)}`);
+    setItems(user.role === 'ngo' ? rankDonationMatches(data, cityQuery || user.city) : data);
   }
   useEffect(() => { load().catch((e) => setError(e.message)); }, [user.role]);
   async function submit(e) { e.preventDefault(); setError(''); try { await api('/donations', { method: 'POST', body: JSON.stringify(form) }); setForm(initial); setShowForm(false); load(); } catch (e) { setError(e.message); } }
@@ -74,7 +77,7 @@ export default function Donations() {
       <div><p className="eyebrow">{user.role === 'donor' ? 'Your food listings' : 'Discover surplus food'}</p><h1>{user.role === 'donor' ? 'My donations' : 'Smart matches'}</h1>{user.role === 'ngo' && <p className="muted">Local listings and pickups due soon are shown first.</p>}</div>
       {user.role === 'donor'
         ? <button className="primary-button" onClick={() => setShowForm(!showForm)}>+ Add donation</button>
-        : <div className="search-box"><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search by city..." /><button onClick={() => load()}>Search</button></div>}
+        : <div className="search-box"><input value={query} onChange={e => setQuery(e.target.value)} placeholder={user.city ? `Profile city: ${user.city}` : 'Enter your city to prioritize local food'} aria-label="Filter donations by city" /><button onClick={() => load()}>Search</button></div>}
     </div>
     {success && <div className="success-box">{success}</div>}
     {showForm && <form className="panel donation-form" onSubmit={submit}>
@@ -97,7 +100,7 @@ export default function Donations() {
       <button className="primary-button" type="submit">Submit request →</button>{' '}
       <button className="secondary-button" type="button" onClick={() => setRequestDonation(null)}>Cancel</button>
     </form>}
-    {user.role === 'ngo' && <div className="match-explainer"><span aria-hidden="true">✦</span> Recommendations prioritize your city and food with a pickup deadline within 24 hours.</div>}
+    {user.role === 'ngo' && <div className="match-explainer"><span aria-hidden="true">✦</span> Your city is compared with donor and pickup cities. Pickups due within 24 hours also receive priority.</div>}
     <div className="donation-grid">
       {items.map((item) => <article className="donation-card" key={item._id}>
         <div className="donation-image">{item.category === 'Fruits' ? '🍎' : item.category === 'Bakery Items' ? '🥐' : '🥗'}<span className={`status ${item.status}`}>{item.status}</span></div>

@@ -7,7 +7,9 @@ MealBridge is a MERN website that connects food donors with NGOs and food receiv
 - JWT authentication with bcrypt password hashing
 - Responsive React dashboard
 - Donor registration and NGO/recipient registration
+- Profile settings for updating user details and NGO city
 - Surplus-food donation creation and city search
+- Smart Match recommendations prioritize same-city donors and pickup locations, plus pickups due within 24 hours
 - Food quantity requests
 - Request approval, rejection, cancellation, and completion
 - MongoDB Atlas data persistence

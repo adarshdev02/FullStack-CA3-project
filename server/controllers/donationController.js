@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Donation = require('../models/Donation');
+const User = require('../models/User');
 
 const fields = ['title', 'description', 'category', 'quantity', 'unit', 'preparedAt', 'pickupDeadline', 'pickupAddress', 'city'];
 function validate(body) {
@@ -19,8 +20,13 @@ async function createDonation(req, res) {
 async function listDonations(req, res) {
   const query = { status: { $in: ['available', 'reserved'] }, pickupDeadline: { $gt: new Date() } };
   if (req.query.category) query.category = req.query.category;
-  if (req.query.city) query.city = new RegExp(req.query.city, 'i');
-  const donations = await Donation.find(query).populate('donor', 'name organizationName phone').sort({ createdAt: -1 });
+  if (typeof req.query.city === 'string' && req.query.city.trim()) {
+    const citySearch = req.query.city.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const city = new RegExp(citySearch, 'i');
+    const donorIds = await User.distinct('_id', { city });
+    query.$or = [{ city }, { donor: { $in: donorIds } }];
+  }
+  const donations = await Donation.find(query).populate('donor', 'name organizationName phone city').sort({ createdAt: -1 });
   res.json(donations);
 }
 async function myDonations(req, res) {

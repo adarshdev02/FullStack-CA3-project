@@ -15,6 +15,7 @@ export default function Navbar() {
         <NavLink to="/dashboard">Overview</NavLink>
         <NavLink to="/donations">{user?.role === 'donor' ? 'Donations' : 'Find food'}</NavLink>
         <NavLink to="/requests">{user?.role === 'donor' ? 'Requests' : 'My requests'}</NavLink>
+        <NavLink to="/profile">Profile</NavLink>
       </nav>
       <div className="nav-right">
         <ThemeToggle />

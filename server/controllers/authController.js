@@ -38,8 +38,11 @@ async function me(req, res) {
 
 async function updateProfile(req, res) {
   const { name, phone } = req.body;
-  if (!name || name.trim().length < 2) return res.status(400).json({ message: 'Name must be at least 2 characters' });
-  const user = await User.findByIdAndUpdate(req.user.id, { name: name.trim(), phone: (phone || '').trim() }, { new: true, runValidators: true });
+  const city = typeof req.body.city === 'string' ? req.body.city.trim() : '';
+  if (!name || typeof name !== 'string' || name.trim().length < 2) return res.status(400).json({ message: 'Name must be at least 2 characters' });
+  if (req.user.role === 'ngo' && !city) return res.status(400).json({ message: 'City is required for NGO profiles' });
+  const profile = { name: name.trim(), phone: typeof phone === 'string' ? phone.trim() : '', city };
+  const user = await User.findByIdAndUpdate(req.user.id, profile, { new: true, runValidators: true });
   if (!user) return res.status(404).json({ message: 'User not found' });
   res.json({ user: publicUser(user) });
 }

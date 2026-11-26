@@ -34,6 +34,16 @@ export default function Dashboard() {
           </div>
         </section>
 
+        {user.role === 'ngo' && !user.city?.trim() && (
+          <aside className="profile-prompt">
+            <div>
+              <strong>Add your city to improve local matches</strong>
+              <span>Smart Match can prioritize nearby listings once your profile has a city.</span>
+            </div>
+            <Link to="/profile">Complete profile <span aria-hidden="true">→</span></Link>
+          </aside>
+        )}
+
         <section className="overview-snapshot" aria-label="Community activity">
           <div className="snapshot-heading">
             <p>YOUR COMMUNITY, AT A GLANCE</p>
