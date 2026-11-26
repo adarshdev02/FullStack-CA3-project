@@ -1,6 +1,6 @@
-# FoodRescue
+# MealBridge
 
-FoodRescue is a MERN website that connects food donors with NGOs and food receivers. Donors publish surplus-food donations, and NGOs search for and request available donations.
+MealBridge is a MERN website that connects food donors with NGOs and food receivers. Donors publish surplus-food donations, and NGOs search for and request available donations.
 
 ## Features
 

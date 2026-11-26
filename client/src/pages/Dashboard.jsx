@@ -8,5 +8,103 @@ export default function Dashboard() {
   const { user } = useAuth(); const [items, setItems] = useState([]); const [requests, setRequests] = useState([]);
   useEffect(() => { Promise.all([api(user.role === 'donor' ? '/donations/my' : '/donations'), api(user.role === 'donor' ? '/requests/received' : '/requests/my')]).then(([d, r]) => { setItems(d); setRequests(r); }).catch(() => {}); }, [user.role]);
   const completed = requests.filter((r) => r.status === 'completed').length;
-  return <Layout><div className="page-heading"><div><p className="eyebrow">Good morning, {user.name.split(' ')[0]}</p><h1>Your impact dashboard</h1><p className="muted">Here’s what’s happening with your food rescue journey.</p></div><Link className="primary-button" to={user.role === 'donor' ? '/donations?create=true' : '/donations'}>{user.role === 'donor' ? '+ Add donation' : 'Find food →'}</Link></div><div className="stats-grid"><div className="stat-card green"><span>♧</span><small>{user.role === 'donor' ? 'Total donations' : 'Available donations'}</small><strong>{items.length}</strong><em>On the platform</em></div><div className="stat-card orange"><span>↗</span><small>{user.role === 'donor' ? 'Incoming requests' : 'My requests'}</small><strong>{requests.length}</strong><em>Keep making a difference</em></div><div className="stat-card purple"><span>✦</span><small>Rescued collections</small><strong>{completed}</strong><em>Meals moved forward</em></div></div><div className="content-grid"><section className="panel"><div className="panel-header"><div><p className="eyebrow">Recent activity</p><h2>{user.role === 'donor' ? 'Your donations' : 'Available near you'}</h2></div><Link to="/donations">View all →</Link></div>{items.slice(0, 4).map((item) => <div className="list-row" key={item._id}><div className="row-icon">{item.category?.slice(0, 1) || '🥗'}</div><div><strong>{item.title}</strong><small>{item.city} · {item.quantity} {item.unit}</small></div><span className={`status ${item.status}`}>{item.status}</span></div>)}{!items.length && <p className="empty">{user.role === 'ngo' ? 'No donations are available yet. Check back or try another city.' : 'No activity yet. Start by adding your first donation.'}</p>}</section><section className="panel impact-card"><p className="eyebrow">Your contribution</p><h2>Every rescued meal<br />is a <em>small victory.</em></h2><p>Thank you for helping good food find a better destination.</p><div className="impact-number">{completed * 4 || 0}<small>estimated meals<br />rescued</small></div></section></div></Layout>;
+  const greeting = 'Welcome back';
+  const firstName = user.name.split(' ')[0];
+  const actionHref = user.role === 'donor' ? '/donations?create=true' : '/donations';
+
+  return (
+    <Layout>
+      <div className="overview">
+        <section className="overview-hero">
+          <div className="overview-copy">
+            <p className="overview-kicker">MEALBRIDGE / COMMUNITY EXCHANGE</p>
+            <p className="overview-greeting">{greeting}, {firstName}</p>
+            <h1>{user.role === 'donor' ? 'Good food has somewhere to go.' : 'Find good food close to home.'}</h1>
+            <p>{user.role === 'donor'
+              ? 'Share what you have. Your neighborhood can put it to good use.'
+              : 'Explore available food and connect with nearby donors.'}</p>
+            <Link className="overview-action" to={actionHref}>
+              {user.role === 'donor' ? 'List surplus food' : 'Browse available food'} <span aria-hidden="true">↗</span>
+            </Link>
+          </div>
+          <div className="overview-stamp" aria-hidden="true">
+            <span>GOOD FOOD</span>
+            <strong>↗</strong>
+            <span>KEEPS MOVING</span>
+          </div>
+        </section>
+
+        <section className="overview-snapshot" aria-label="Community activity">
+          <div className="snapshot-heading">
+            <p>YOUR COMMUNITY, AT A GLANCE</p>
+            <span>Activity snapshot</span>
+          </div>
+          <div className="snapshot-metrics">
+            <div className="snapshot-metric">
+              <strong>{items.length}</strong>
+              <span>{user.role === 'donor' ? 'Your listings' : 'Food available'}</span>
+            </div>
+            <div className="snapshot-metric">
+              <strong>{requests.length}</strong>
+              <span>{user.role === 'donor' ? 'Requests received' : 'Your requests'}</span>
+            </div>
+            <div className="snapshot-metric">
+              <strong>{completed * 4}</strong>
+              <span>Meals estimated rescued</span>
+            </div>
+          </div>
+        </section>
+
+        <div className="overview-columns">
+          <section className="overview-feed">
+            <div className="overview-section-heading">
+              <div>
+                <p className="overview-kicker">ON THE MOVE</p>
+                <h2>{user.role === 'donor' ? 'Your latest listings' : 'Food near you'}</h2>
+              </div>
+              <Link to="/donations">All listings <span aria-hidden="true">→</span></Link>
+            </div>
+            {items.slice(0, 4).map((item) => (
+              <article className="overview-food-row" key={item._id}>
+                <span className="overview-food-icon" aria-hidden="true">
+                  {item.category === 'Fruits' ? '🍎' : item.category === 'Bakery Items' ? '🥐' : '🥗'}
+                </span>
+                <div className="overview-food-detail">
+                  <strong>{item.title}</strong>
+                  <span>{item.city} · {item.quantity} {item.unit}</span>
+                </div>
+                <span className={`overview-status ${item.status}`}>{item.status}</span>
+              </article>
+            ))}
+            {!items.length && (
+              <p className="overview-empty">
+                {user.role === 'ngo' ? 'No food listings yet. Check back soon.' : 'Your first listing can start a local food connection.'}
+              </p>
+            )}
+          </section>
+
+          <aside className="overview-requests">
+            <div className="overview-section-heading">
+              <div>
+                <p className="overview-kicker">HANDOFFS</p>
+                <h2>Request pulse</h2>
+              </div>
+              <Link to="/requests" aria-label="View all requests">→</Link>
+            </div>
+            {requests.slice(0, 3).map((request) => (
+              <div className="overview-request-row" key={request._id}>
+                <span className={`request-indicator ${request.status}`} />
+                <div>
+                  <strong>{request.donation?.title || 'Food request'}</strong>
+                  <span>{request.status}</span>
+                </div>
+              </div>
+            ))}
+            {!requests.length && <p className="overview-empty">No requests yet. New activity will show up here.</p>}
+            <Link className="overview-request-link" to="/requests">Open request center <span aria-hidden="true">↗</span></Link>
+          </aside>
+        </div>
+      </div>
+    </Layout>
+  );
 }
