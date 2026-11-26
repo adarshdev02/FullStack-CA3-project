@@ -5,9 +5,36 @@ import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const initial = { title: '', description: '', category: 'Cooked Meals', quantity: 1, unit: 'meal boxes', preparedAt: '', pickupDeadline: '', pickupAddress: '', city: '', postalCode: '', allergens: '' };
+
+function rankDonationMatches(donations, city) {
+  const normalizedCity = city?.trim().toLowerCase();
+  const now = Date.now();
+
+  return donations
+    .map((item) => {
+      const deadline = Date.parse(item.pickupDeadline);
+      const sameCity = Boolean(normalizedCity) && item.city?.trim().toLowerCase() === normalizedCity;
+      const pickupSoon = Number.isFinite(deadline) && deadline > now && deadline - now <= 24 * 60 * 60 * 1000;
+      const matchReasons = [];
+      if (sameCity) matchReasons.push('Same city');
+      if (pickupSoon) matchReasons.push('Pickup soon');
+
+      return {
+        item: { ...item, matchReasons },
+        score: Number(sameCity) * 2 + Number(pickupSoon),
+        deadline: Number.isFinite(deadline) ? deadline : Number.MAX_SAFE_INTEGER
+      };
+    })
+    .sort((a, b) => b.score - a.score || a.deadline - b.deadline)
+    .map(({ item }) => item);
+}
+
 export default function Donations() {
   const { user } = useAuth(); const [search] = useSearchParams(); const [items, setItems] = useState([]); const [form, setForm] = useState(initial); const [showForm, setShowForm] = useState(search.get('create') === 'true'); const [query, setQuery] = useState(''); const [error, setError] = useState(''); const [success, setSuccess] = useState(''); const [requestDonation, setRequestDonation] = useState(null); const [requestedQuantity, setRequestedQuantity] = useState(1);
-  async function load() { const data = await api(user.role === 'donor' ? '/donations/my' : `/donations?city=${encodeURIComponent(query)}`); setItems(data); }
+  async function load() {
+    const data = await api(user.role === 'donor' ? '/donations/my' : `/donations?city=${encodeURIComponent(query)}`);
+    setItems(user.role === 'ngo' ? rankDonationMatches(data, user.city) : data);
+  }
   useEffect(() => { load().catch((e) => setError(e.message)); }, [user.role]);
   async function submit(e) { e.preventDefault(); setError(''); try { await api('/donations', { method: 'POST', body: JSON.stringify(form) }); setForm(initial); setShowForm(false); load(); } catch (e) { setError(e.message); } }
   async function openRequest(item) {
@@ -44,7 +71,7 @@ export default function Donations() {
   }
   return <Layout>
     <div className="page-heading">
-      <div><p className="eyebrow">{user.role === 'donor' ? 'Your food listings' : 'Discover surplus food'}</p><h1>{user.role === 'donor' ? 'My donations' : 'Available near you'}</h1></div>
+      <div><p className="eyebrow">{user.role === 'donor' ? 'Your food listings' : 'Discover surplus food'}</p><h1>{user.role === 'donor' ? 'My donations' : 'Smart matches'}</h1>{user.role === 'ngo' && <p className="muted">Local listings and pickups due soon are shown first.</p>}</div>
       {user.role === 'donor'
         ? <button className="primary-button" onClick={() => setShowForm(!showForm)}>+ Add donation</button>
         : <div className="search-box"><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search by city..." /><button onClick={() => load()}>Search</button></div>}
@@ -70,11 +97,13 @@ export default function Donations() {
       <button className="primary-button" type="submit">Submit request →</button>{' '}
       <button className="secondary-button" type="button" onClick={() => setRequestDonation(null)}>Cancel</button>
     </form>}
+    {user.role === 'ngo' && <div className="match-explainer"><span aria-hidden="true">✦</span> Recommendations prioritize your city and food with a pickup deadline within 24 hours.</div>}
     <div className="donation-grid">
       {items.map((item) => <article className="donation-card" key={item._id}>
         <div className="donation-image">{item.category === 'Fruits' ? '🍎' : item.category === 'Bakery Items' ? '🥐' : '🥗'}<span className={`status ${item.status}`}>{item.status}</span></div>
         <div className="donation-content">
           <p className="eyebrow">{item.category}</p><h3>{item.title}</h3><p className="muted">{item.description}</p>
+          {item.matchReasons?.length > 0 && <div className="match-reasons">{item.matchReasons.map((reason) => <span key={reason}>{reason}</span>)}</div>}
           <div className="donation-meta"><span>◷ {item.remainingQuantity} {item.unit} left</span><span>⌖ {item.city}</span></div>
           {user.role === 'ngo' && <button className="primary-button small" onClick={() => openRequest(item)}>Request food</button>}
         </div>
